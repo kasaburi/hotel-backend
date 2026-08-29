@@ -1,3 +1,4 @@
+
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
@@ -25,7 +26,10 @@ class Room(Base):
         nullable=True
     )
 
+    # =====================================================
     # ქართული
+    # =====================================================
+
     name_ka = Column(
         String(255),
         nullable=False
@@ -36,7 +40,10 @@ class Room(Base):
         nullable=True
     )
 
+    # =====================================================
     # ინგლისური
+    # =====================================================
+
     name_en = Column(
         String(255),
         nullable=True
@@ -47,20 +54,29 @@ class Room(Base):
         nullable=True
     )
 
-    # ფასი
+    # =====================================================
+    # ოთახის ფასი
+    # =====================================================
+
     price_per_night = Column(
         Float,
         nullable=False
     )
 
-    # მაქსიმალური სტუმრები
+    # =====================================================
+    # მაქსიმალური სტუმრების რაოდენობა
+    # =====================================================
+
     max_guests = Column(
         Integer,
         nullable=False,
         default=1
     )
 
+    # =====================================================
     # ჯავშნების რაოდენობა
+    # =====================================================
+
     reservation_count = Column(
         Integer,
         nullable=False,
@@ -71,23 +87,46 @@ class Room(Base):
     # RELATIONSHIPS
     # =====================================================
 
+    # Hotel → Rooms
     hotel = relationship(
         "Hotel",
         back_populates="rooms"
     )
 
+    # RoomType → Rooms
     room_type = relationship(
         "RoomType",
         back_populates="rooms"
     )
 
+    # Room → Images
     images = relationship(
         "RoomImage",
         back_populates="room",
         cascade="all, delete-orphan"
     )
 
+    # Room → Bookings
     bookings = relationship(
         "Booking",
         back_populates="room"
+    )
+
+class RoomImage(Base):
+    __tablename__ = "room_images"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    room_id = Column(
+        Integer,
+        ForeignKey(
+            "rooms.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
     )

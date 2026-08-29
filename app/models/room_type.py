@@ -7,7 +7,23 @@ from app.database import Base
 class RoomType(Base):
     __tablename__ = "room_types"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, unique=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    rooms = relationship("Room", back_populates="room_type")
+    name_ka = Column(
+        String(100),
+        nullable=False
+    )
+
+    name_en = Column(
+        String(100),
+        nullable=False
+    )
+
+    rooms = relationship(
+        "Room",
+        back_populates="room_type"
+    )
