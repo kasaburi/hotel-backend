@@ -1,7 +1,8 @@
+
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 # =========================================================
@@ -113,17 +114,31 @@ class RoomCreate(RoomBase):
 class RoomResponse(BaseModel):
     id: int
 
-    hotelId: int
-    roomTypeId: Optional[int] = None
+    hotelId: int = Field(validation_alias="hotel_id")
+    roomTypeId: Optional[int] = Field(
+        default=None,
+        validation_alias="room_type_id"
+    )
 
-    name: str
+    name: str = Field(validation_alias="name_ka")
     roomTypeName: Optional[str] = None
 
-    description: Optional[str] = None
+    description: Optional[str] = Field(
+        default=None,
+        validation_alias="description_ka"
+    )
 
-    pricePerNight: float
-    maxGuests: int
-    reservationCount: int
+    pricePerNight: float = Field(
+        validation_alias="price_per_night"
+    )
+
+    maxGuests: int = Field(
+        validation_alias="max_guests"
+    )
+
+    reservationCount: int = Field(
+        validation_alias="reservation_count"
+    )
 
     images: list[RoomImageResponse] = []
 
@@ -203,6 +218,8 @@ class BookingResponse(BaseModel):
 
     status: str
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 # =========================================================
 # PAYMENT
@@ -243,3 +260,4 @@ class ReviewResponse(BaseModel):
     createdAt: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
