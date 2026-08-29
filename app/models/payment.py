@@ -24,13 +24,9 @@ class Payment(Base):
 
     booking_id = Column(
         Integer,
-        ForeignKey(
-            "bookings.id",
-            ondelete="CASCADE"
-        ),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
-        index=True
+        unique=True
     )
 
     amount = Column(

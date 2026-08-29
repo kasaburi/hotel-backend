@@ -84,11 +84,11 @@ class User(Base):
     )
 
     # მომხმარებლის გადახდები
-    payments = relationship(
-        "Payment",
-        back_populates="user",
-        cascade="all, delete-orphan"
-    )
+    # payments = relationship(
+    #     "Payment",
+    #     back_populates="user",
+    #     cascade="all, delete-orphan"
+    # )
 
     # მომხმარებლის ფავორიტები
     favorites = relationship(
