@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
@@ -16,7 +15,10 @@ class Room(Base):
 
     hotel_id = Column(
         Integer,
-        ForeignKey("hotels.id", ondelete="CASCADE"),
+        ForeignKey(
+            "hotels.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
     )
 
@@ -110,23 +112,4 @@ class Room(Base):
     bookings = relationship(
         "Booking",
         back_populates="room"
-    )
-
-class RoomImage(Base):
-    __tablename__ = "room_images"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
-
-    room_id = Column(
-        Integer,
-        ForeignKey(
-            "rooms.id",
-            ondelete="CASCADE"
-        ),
-        nullable=False,
-        index=True
     )

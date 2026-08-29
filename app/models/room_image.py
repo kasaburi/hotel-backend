@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -33,4 +32,3 @@ class RoomImage(Base):
         "Room",
         back_populates="images"
     )
-
