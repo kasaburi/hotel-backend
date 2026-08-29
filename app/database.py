@@ -1,4 +1,3 @@
-
 import os
 
 from dotenv import load_dotenv
@@ -12,7 +11,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL is not configured in .env")
+    raise ValueError("DATABASE_URL environment variable is not configured")
 
 
 engine = create_engine(
@@ -38,4 +37,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
