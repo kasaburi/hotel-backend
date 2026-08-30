@@ -13,6 +13,11 @@ class RoomType(Base):
         index=True
     )
 
+    name = Column(
+        String(100),
+        nullable=False
+    )
+
     name_ka = Column(
         String(100),
         nullable=False
