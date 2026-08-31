@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text
+
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Numeric
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -61,7 +62,7 @@ class Room(Base):
     # =====================================================
 
     price_per_night = Column(
-        Float,
+        Numeric(10, 2),
         nullable=False
     )
 
