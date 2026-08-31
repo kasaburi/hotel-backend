@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -29,7 +30,7 @@ def get_all_rooms(db: Session = Depends(get_db)):
             "roomTypeId": room.room_type_id,
 
             "roomTypeName": (
-                room.room_type.name
+                room.room_type.name_en or room.room_type.name_ka
                 if room.room_type
                 else None
             ),
@@ -54,7 +55,7 @@ def get_room_types(db: Session = Depends(get_db)):
     return [
         {
             "id": room_type.id,
-            "name": room_type.name
+            "name": room_type.name_en or room_type.name_ka
         }
         for room_type in room_types
     ]
@@ -95,7 +96,7 @@ def get_room(
         "roomTypeId": room.room_type_id,
 
         "roomTypeName": (
-            room.room_type.name
+            room.room_type.name_en or room.room_type.name_ka
             if room.room_type
             else None
         ),
