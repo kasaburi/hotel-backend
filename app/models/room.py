@@ -1,155 +1,113 @@
+from sqlalchemy import Column, Integer, Text, ForeignKey, Numeric, String
+from sqlalchemy.orm import relationship
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
-from app.database import get_db
-from app.models import Room, RoomType
+from app.database import Base
 
 
-router = APIRouter(
-    prefix="/api/Rooms",
-    tags=["Rooms"]
-)
+class Room(Base):
+    __tablename__ = "rooms"
 
-
-# =========================================================
-# GET ALL ROOMS
-# =========================================================
-
-@router.get("/GetAll")
-def get_all_rooms(db: Session = Depends(get_db)):
-
-    rooms = db.query(Room).all()
-
-    return [
-        {
-            "id": room.id,
-
-            "name": room.name_en or room.name_ka,
-
-            "description": (
-                room.description_en
-                or room.description_ka
-            ),
-
-            "pricePerNight": float(room.price_per_night),
-
-            "maxGuests": room.max_guests,
-
-            "hotelId": room.hotel_id,
-
-            "roomTypeId": room.room_type_id,
-
-            "roomTypeName": (
-                room.room_type.name_en
-                or room.room_type.name_ka
-                if room.room_type
-                else None
-            ),
-
-            "reservationCount": room.reservation_count,
-
-            # =================================================
-            # ROOM TYPE IMAGES
-            # ერთი ტიპის ყველა ოთახი იყენებს ერთსა და იმავე ფოტოებს
-            # =================================================
-
-            "images": [
-                {
-                    "source": image.source
-                }
-                for image in room.room_type.images
-            ] if room.room_type else []
-        }
-
-        for room in rooms
-    ]
-
-
-# =========================================================
-# GET ROOM TYPES
-# =========================================================
-
-@router.get("/GetRoomTypes")
-def get_room_types(db: Session = Depends(get_db)):
-
-    room_types = db.query(RoomType).all()
-
-    return [
-        {
-            "id": room_type.id,
-
-            "name": (
-                room_type.name_en
-                or room_type.name_ka
-            )
-        }
-
-        for room_type in room_types
-    ]
-
-
-# =========================================================
-# GET SINGLE ROOM
-# =========================================================
-
-@router.get("/{room_id}")
-def get_room(
-    room_id: int,
-    db: Session = Depends(get_db)
-):
-
-    room = (
-        db.query(Room)
-        .filter(Room.id == room_id)
-        .first()
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
     )
 
-    if not room:
-        raise HTTPException(
-            status_code=404,
-            detail="Room not found"
-        )
-
-    return {
-        "id": room.id,
-
-        "name": (
-            room.name_en
-            or room.name_ka
+    hotel_id = Column(
+        Integer,
+        ForeignKey(
+            "hotels.id",
+            ondelete="CASCADE"
         ),
+        nullable=False
+    )
 
-        "description": (
-            room.description_en
-            or room.description_ka
+    room_type_id = Column(
+        Integer,
+        ForeignKey(
+            "room_types.id"
         ),
+        nullable=True
+    )
 
-        "pricePerNight": float(room.price_per_night),
+    # =====================================================
+    # ქართული
+    # =====================================================
 
-        "maxGuests": room.max_guests,
+    name_ka = Column(
+        String(255),
+        nullable=False
+    )
 
-        "hotelId": room.hotel_id,
+    description_ka = Column(
+        Text,
+        nullable=True
+    )
 
-        "roomTypeId": room.room_type_id,
+    # =====================================================
+    # ინგლისური
+    # =====================================================
 
-        "roomTypeName": (
-            room.room_type.name_en
-            or room.room_type.name_ka
-            if room.room_type
-            else None
-        ),
+    name_en = Column(
+        String(255),
+        nullable=True
+    )
 
-        "reservationCount": room.reservation_count,
+    description_en = Column(
+        Text,
+        nullable=True
+    )
 
-        # =================================================
-        # ROOM TYPE IMAGES
-        # =================================================
+    # =====================================================
+    # ფასი
+    # =====================================================
 
-        "images": [
-            {
-                "source": image.source
-            }
-            for image in room.room_type.images
-        ] if room.room_type else []
-    }
+    price_per_night = Column(
+        Numeric(10, 2),
+        nullable=False
+    )
 
+    # =====================================================
+    # მაქსიმალური სტუმრები
+    # =====================================================
+
+    max_guests = Column(
+        Integer,
+        nullable=False,
+        default=1
+    )
+
+    # =====================================================
+    # ჯავშნების რაოდენობა
+    # =====================================================
+
+    reservation_count = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
+
+    hotel = relationship(
+        "Hotel",
+        back_populates="rooms"
+    )
+
+    room_type = relationship(
+        "RoomType",
+        back_populates="rooms"
+    )
+
+    images = relationship(
+        "RoomImage",
+        back_populates="room",
+        cascade="all, delete-orphan"
+    )
+
+    bookings = relationship(
+        "Booking",
+        back_populates="room"
+    )
