@@ -1,7 +1,5 @@
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
 
 # =========================================================
 # MODELS
@@ -35,13 +33,6 @@ from app.routes.favorites import router as favorites_router
 
 
 # =========================================================
-# DATABASE
-# =========================================================
-
-Base.metadata.create_all(bind=engine)
-
-
-# =========================================================
 # FASTAPI APP
 # =========================================================
 
@@ -50,6 +41,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,6 +49,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # =========================================================
 # ROUTERS
