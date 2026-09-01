@@ -15,13 +15,19 @@ class RoomTypeImage(Base):
 
     hotel_id = Column(
         Integer,
-        ForeignKey("hotels.id", ondelete="CASCADE"),
+        ForeignKey(
+            "hotels.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
     )
 
     room_type_id = Column(
         Integer,
-        ForeignKey("room_types.id", ondelete="CASCADE"),
+        ForeignKey(
+            "room_types.id",
+            ondelete="CASCADE"
+        ),
         nullable=False
     )
 
