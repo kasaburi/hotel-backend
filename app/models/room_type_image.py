@@ -1,11 +1,17 @@
 from sqlalchemy import Column, Integer, Text, ForeignKey
+from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 
 class RoomTypeImage(Base):
     __tablename__ = "room_type_images"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
     hotel_id = Column(
         Integer,
@@ -19,4 +25,12 @@ class RoomTypeImage(Base):
         nullable=False
     )
 
-    source = Column(Text, nullable=False)
+    source = Column(
+        Text,
+        nullable=False
+    )
+
+    room_type = relationship(
+        "RoomType",
+        back_populates="images"
+    )

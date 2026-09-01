@@ -27,3 +27,9 @@ class RoomType(Base):
         "Room",
         back_populates="room_type"
     )
+
+    images = relationship(
+        "RoomTypeImage",
+        back_populates="room_type",
+        cascade="all, delete-orphan"
+    )
