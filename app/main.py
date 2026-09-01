@@ -14,6 +14,7 @@ from app.models import (
     Room,
     RoomImage,
     RoomType,
+    RoomTypeImage,
     Booking,
     Payment,
     Review,

@@ -1,3 +1,4 @@
+from sqlalchemy import text
 
 from app.database import SessionLocal
 
@@ -5,17 +6,16 @@ from app.models.hotel import Hotel
 from app.models.room import Room
 from app.models.room_type import RoomType
 from app.models.hotel_image import HotelImage
-from app.models.room_image import RoomImage
 
 
 db = SessionLocal()
 
 
 # =========================================================
-# HELPER FUNCTION - ADD ROOM
+# HELPER - ADD ROOM
 # =========================================================
 
-def add_room(
+def add_rooms(
     hotel_id,
     room_type_id,
     name_ka,
@@ -24,8 +24,7 @@ def add_room(
     description_en,
     price,
     max_guests,
-    image_urls,
-    quantity=1
+    quantity
 ):
     rooms = []
 
@@ -50,20 +49,63 @@ def add_room(
 
     db.flush()
 
-    # Add images to every created room
-    for room in rooms:
-        for image_url in image_urls:
-            db.add(
-                RoomImage(
-                    room_id=room.id,
-                    source=image_url
-                )
-            )
-
     return rooms
 
 
+# =========================================================
+# HELPER - ADD ROOM TYPE IMAGES
+# =========================================================
+
+def add_room_type_images(
+    hotel_id,
+    room_type_id,
+    image_urls
+):
+    for image_url in image_urls:
+        db.execute(
+            text("""
+                INSERT INTO room_type_images
+                (hotel_id, room_type_id, source)
+                VALUES (:hotel_id, :room_type_id, :source)
+            """),
+            {
+                "hotel_id": hotel_id,
+                "room_type_id": room_type_id,
+                "source": image_url
+            }
+        )
+
+
 try:
+
+    # =========================================================
+    # CLEAN OLD DATA
+    # =========================================================
+
+    print("Cleaning old hotel/room data...")
+
+    # ძველი ოთახის ფოტოები აღარ გვჭირდება
+    db.execute(text("DELETE FROM room_images"))
+
+    # ახალი room_type_images-ის ძველი მონაცემები
+    db.execute(text("DELETE FROM room_type_images"))
+
+    # სასტუმროს ფოტოები
+    db.execute(text("DELETE FROM hotel_images"))
+
+    # ოთახები
+    db.execute(text("DELETE FROM rooms"))
+
+    # სასტუმროები
+    db.execute(text("DELETE FROM hotels"))
+
+    # ოთახის ტიპები
+    db.execute(text("DELETE FROM room_types"))
+
+    db.commit()
+
+    print("Old data cleaned successfully.")
+
 
     # =========================================================
     # ROOM TYPES
@@ -106,7 +148,9 @@ try:
 
 
     # =========================================================
+    # =========================================================
     # HOTEL 1 - RADISSON BLU IVERIA
+    # =========================================================
     # =========================================================
 
     hotel1 = Hotel(
@@ -169,205 +213,179 @@ try:
 
 
     # =========================================================
-    # HOTEL 1 - SINGLE ROOMS
-    # 5 ROOMS
+    # HOTEL 1 - SINGLE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel1.id,
-        room_type_id=single_type.id,
+    add_rooms(
+        hotel1.id,
+        single_type.id,
+        "ერთადგილიანი ოთახი",
+        "Single Room",
 
-        name_ka="ერთადგილიანი ოთახი",
-        name_en="Single Room",
+        "კომფორტული ერთადგილიანი ოთახი განკუთვნილია ერთი "
+        "სტუმრისთვის. ოთახში განთავსებულია კომფორტული საწოლი, "
+        "სამუშაო მაგიდა, ტელევიზორი, კონდიციონერი, უფასო Wi-Fi "
+        "და პირადი აბაზანა.",
 
-        description_ka=(
-            "კომფორტული ერთადგილიანი ოთახი განკუთვნილია ერთი "
-            "სტუმრისთვის. ოთახში განთავსებულია კომფორტული საწოლი, "
-            "სამუშაო მაგიდა, ტელევიზორი, კონდიციონერი, უფასო Wi-Fi "
-            "და პირადი აბაზანა. ოთახი იდეალურია როგორც საქმიანი, "
-            "ასევე მოკლე ტურისტული ვიზიტებისთვის."
-        ),
+        "A comfortable single room designed for one guest. "
+        "The room features a comfortable bed, work desk, TV, "
+        "air conditioning, free Wi-Fi and a private bathroom.",
 
-        description_en=(
-            "A comfortable single room designed for one guest. "
-            "The room features a comfortable bed, work desk, TV, "
-            "air conditioning, free Wi-Fi and a private bathroom. "
-            "It is ideal for both business and short leisure stays."
-        ),
+        220,
+        1,
+        5
+    )
 
-        price=220,
-        max_guests=1,
-
-        image_urls=[
+    add_room_type_images(
+        hotel1.id,
+        single_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/SINGLE_IMAGE_1.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/SINGLE_IMAGE_2.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/SINGLE_IMAGE_3.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 1 - STANDARD ROOMS
-    # 5 ROOMS
+    # HOTEL 1 - STANDARD
     # =========================================================
 
-    add_room(
-        hotel_id=hotel1.id,
-        room_type_id=standard_type.id,
+    add_rooms(
+        hotel1.id,
+        standard_type.id,
+        "სტანდარტული ოთახი",
+        "Standard Room",
 
-        name_ka="სტანდარტული ოთახი",
-        name_en="Standard Room",
+        "მყუდრო და თანამედროვე სტანდარტული ოთახი განკუთვნილია "
+        "ერთი ან ორი სტუმრისთვის. ოთახში განთავსებულია კომფორტული "
+        "ორადგილიანი საწოლი, სამუშაო მაგიდა და დასასვენებელი სივრცე.",
 
-        description_ka=(
-            "მყუდრო და თანამედროვე სტანდარტული ოთახი განკუთვნილია "
-            "ერთი ან ორი სტუმრისთვის. ოთახში განთავსებულია კომფორტული "
-            "ორადგილიანი საწოლი, სამუშაო მაგიდა და დასასვენებელი სივრცე. "
-            "სტუმრებს შეუძლიათ ისარგებლონ უფასო Wi-Fi-ით, ტელევიზორით, "
-            "კონდიციონერით და პირადი თანამედროვე აბაზანით."
-        ),
+        "A cozy and modern standard room designed for one or two "
+        "guests. The room features a comfortable double bed, "
+        "work desk and seating area.",
 
-        description_en=(
-            "A cozy and modern standard room designed for one or two "
-            "guests. The room features a comfortable double bed, work "
-            "desk and seating area. Guests can enjoy free Wi-Fi, TV, "
-            "air conditioning and a modern private bathroom."
-        ),
+        280,
+        2,
+        5
+    )
 
-        price=280,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel1.id,
+        standard_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_w5mf0nw5mf0nw5mf.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_tdcv6stdcv6stdcv.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_2y9o62y9o62y9o62.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 1 - DELUXE ROOMS
-    # 4 ROOMS
+    # HOTEL 1 - DELUXE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel1.id,
-        room_type_id=deluxe_type.id,
+    add_rooms(
+        hotel1.id,
+        deluxe_type.id,
+        "დელუქს ოთახი",
+        "Deluxe Room",
 
-        name_ka="დელუქს ოთახი",
-        name_en="Deluxe Room",
+        "ფართო და ელეგანტური დელუქს ოთახი სტუმრებს სთავაზობს "
+        "დამატებით სივრცესა და კომფორტს. ოთახში განთავსებულია "
+        "დიდი ორადგილიანი საწოლი, დასასვენებელი ზონა, სამუშაო "
+        "მაგიდა, ტელევიზორი და მინიბარი.",
 
-        description_ka=(
-            "ფართო და ელეგანტური დელუქს ოთახი სტუმრებს სთავაზობს "
-            "დამატებით სივრცესა და კომფორტს. ოთახში განთავსებულია "
-            "დიდი ორადგილიანი საწოლი, დასასვენებელი ზონა, სამუშაო "
-            "მაგიდა, ტელევიზორი და მინიბარი. ასევე ხელმისაწვდომია "
-            "კონდიციონერი, უფასო Wi-Fi და თანამედროვე პირადი აბაზანა."
-        ),
+        "A spacious and elegant deluxe room offering additional "
+        "space and comfort. The room includes a large double bed, "
+        "seating area, work desk, TV and minibar.",
 
-        description_en=(
-            "A spacious and elegant deluxe room offering additional "
-            "space and comfort. The room includes a large double bed, "
-            "seating area, work desk, TV and minibar. Guests also have "
-            "access to air conditioning, free Wi-Fi and a modern "
-            "private bathroom."
-        ),
+        350,
+        2,
+        4
+    )
 
-        price=350,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel1.id,
+        deluxe_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_w5mf0nw5mf0nw5mf.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_tdcv6stdcv6stdcv.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_8ejodn8ejodn8ejo.jpg"
-        ],
-
-        quantity=4
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 1 - FAMILY ROOMS
-    # 2 ROOMS
+    # HOTEL 1 - FAMILY
     # =========================================================
 
-    add_room(
-        hotel_id=hotel1.id,
-        room_type_id=family_type.id,
+    add_rooms(
+        hotel1.id,
+        family_type.id,
+        "ოჯახური ოთახი",
+        "Family Room",
 
-        name_ka="ოჯახური ოთახი",
-        name_en="Family Room",
+        "ფართო ოჯახური ნომერი განკუთვნილია ოჯახებისა და მცირე "
+        "ჯგუფებისთვის. ოთახში შესაძლებელია ოთხამდე სტუმრის "
+        "კომფორტულად განთავსება.",
 
-        description_ka=(
-            "ფართო ოჯახური ნომერი განკუთვნილია ოჯახებისა და მცირე "
-            "ჯგუფებისთვის. ოთახში შესაძლებელია ოთხამდე სტუმრის "
-            "კომფორტულად განთავსება. ნომერი მოიცავს კომფორტულ საწოლებს, "
-            "დასასვენებელ სივრცეს, სამუშაო მაგიდას, ტელევიზორს, "
-            "კონდიციონერს, უფასო Wi-Fi-ს და თანამედროვე აბაზანას."
-        ),
+        "A spacious family room designed for families and small "
+        "groups. The room can comfortably accommodate up to four "
+        "guests.",
 
-        description_en=(
-            "A spacious family room designed for families and small "
-            "groups. The room can comfortably accommodate up to four "
-            "guests and includes comfortable beds, seating area, work "
-            "desk, TV, air conditioning, free Wi-Fi and a modern bathroom."
-        ),
+        480,
+        4,
+        2
+    )
 
-        price=480,
-        max_guests=4,
-
-        image_urls=[
+    add_room_type_images(
+        hotel1.id,
+        family_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_w5mf0nw5mf0nw5mf.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_2y9o62y9o62y9o62.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 1 - SUITES
-    # 2 ROOMS
+    # HOTEL 1 - SUITE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel1.id,
-        room_type_id=suite_type.id,
+    add_rooms(
+        hotel1.id,
+        suite_type.id,
+        "ლუქსი",
+        "Suite",
 
-        name_ka="ლუქსი",
-        name_en="Suite",
+        "მდიდრული და ფართო ლუქსი შექმნილია სტუმრებისთვის, "
+        "რომლებიც განსაკუთრებულ კომფორტსა და პრემიუმ გამოცდილებას "
+        "ეძებენ. ნომერი მოიცავს ცალკე საძინებელსა და მისაღებ სივრცეს.",
 
-        description_ka=(
-            "მდიდრული და ფართო ლუქსი შექმნილია სტუმრებისთვის, "
-            "რომლებიც განსაკუთრებულ კომფორტსა და პრემიუმ გამოცდილებას "
-            "ეძებენ. ნომერი მოიცავს ცალკე საძინებელსა და მისაღებ სივრცეს, "
-            "დიდ საწოლს, კომფორტულ დივანს, სამუშაო მაგიდას და მინიბარს."
-        ),
+        "A luxurious and spacious suite designed for guests seeking "
+        "maximum comfort and a premium experience. The suite includes "
+        "a separate bedroom and living area.",
 
-        description_en=(
-            "A luxurious and spacious suite designed for guests seeking "
-            "maximum comfort and a premium experience. The suite includes "
-            "a separate bedroom and living area, a large bed, comfortable "
-            "sofa, work desk and minibar."
-        ),
+        650,
+        3,
+        2
+    )
 
-        price=650,
-        max_guests=3,
-
-        image_urls=[
+    add_room_type_images(
+        hotel1.id,
+        suite_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_2tum4j2tum4j2tum.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/radisson/Gemini_Generated_Image_2y9o62y9o62y9o62.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
     # =========================================================
+    # =========================================================
     # HOTEL 2 - ROOMS HOTEL TBILISI
+    # =========================================================
     # =========================================================
 
     hotel2 = Hotel(
@@ -377,16 +395,12 @@ try:
         description_ka=(
             "Rooms Hotel Tbilisi არის თანამედროვე დიზაინის სასტუმრო, "
             "რომელიც გამოირჩევა ინდივიდუალური არქიტექტურით, საინტერესო "
-            "ინტერიერითა და მყუდრო ატმოსფეროთი. სასტუმრო მდებარეობს "
-            "თბილისის გამორჩეულ უბანში და სტუმრებს სთავაზობს კომფორტულ "
-            "ოთახებს, დასასვენებელ სივრცეებსა და მაღალი ხარისხის მომსახურებას."
+            "ინტერიერითა და მყუდრო ატმოსფეროთი."
         ),
 
         description_en=(
             "Rooms Hotel Tbilisi is a stylish design hotel known for its "
-            "distinctive architecture, unique interiors and cozy atmosphere. "
-            "The hotel offers comfortable rooms, relaxing spaces and "
-            "high-quality hospitality."
+            "distinctive architecture, unique interiors and cozy atmosphere."
         ),
 
         city="Tbilisi",
@@ -423,192 +437,175 @@ try:
 
 
     # =========================================================
-    # HOTEL 2 - SINGLE ROOMS
-    # 5 ROOMS
+    # HOTEL 2 - SINGLE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel2.id,
-        room_type_id=single_type.id,
+    add_rooms(
+        hotel2.id,
+        single_type.id,
+        "ერთადგილიანი ოთახი",
+        "Single Room",
 
-        name_ka="ერთადგილიანი ოთახი",
-        name_en="Single Room",
+        "მყუდრო ერთადგილიანი ოთახი შექმნილია ერთი სტუმრისთვის. "
+        "ნომერში არის კომფორტული საწოლი, სამუშაო სივრცე, "
+        "ტელევიზორი, კონდიციონერი, უფასო Wi-Fi და პირადი აბაზანა.",
 
-        description_ka=(
-            "მყუდრო ერთადგილიანი ოთახი შექმნილია ერთი სტუმრისთვის. "
-            "ნომერში არის კომფორტული საწოლი, სამუშაო სივრცე, "
-            "ტელევიზორი, კონდიციონერი, უფასო Wi-Fi და პირადი აბაზანა."
-        ),
+        "A cozy single room designed for one guest. The room includes "
+        "a comfortable bed, workspace, TV, air conditioning, free Wi-Fi "
+        "and a private bathroom.",
 
-        description_en=(
-            "A cozy single room designed for one guest. The room includes "
-            "a comfortable bed, workspace, TV, air conditioning, free Wi-Fi "
-            "and a private bathroom."
-        ),
+        210,
+        1,
+        5
+    )
 
-        price=210,
-        max_guests=1,
-
-        image_urls=[
+    add_room_type_images(
+        hotel2.id,
+        single_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_nt406wnt406wnt40.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_ka8syka8syka8syk.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_w1fwqw1fwqw1fwqw.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 2 - STANDARD ROOMS
-    # 5 ROOMS
+    # HOTEL 2 - STANDARD
     # =========================================================
 
-    add_room(
-        hotel_id=hotel2.id,
-        room_type_id=standard_type.id,
+    add_rooms(
+        hotel2.id,
+        standard_type.id,
+        "სტანდარტული ოთახი",
+        "Standard Room",
 
-        name_ka="სტანდარტული ოთახი",
-        name_en="Standard Room",
+        "თანამედროვე დიზაინის მყუდრო სტანდარტული ოთახი შექმნილია "
+        "კომფორტული დასვენებისთვის. ნომერში არის კომფორტული საწოლი, "
+        "სამუშაო სივრცე, ტელევიზორი, კონდიციონერი და უფასო Wi-Fi.",
 
-        description_ka=(
-            "თანამედროვე დიზაინის მყუდრო სტანდარტული ოთახი შექმნილია "
-            "კომფორტული დასვენებისთვის. ნომერში არის კომფორტული საწოლი, "
-            "სამუშაო სივრცე, ტელევიზორი, კონდიციონერი, უფასო Wi-Fi "
-            "და პირადი აბაზანა."
-        ),
+        "A cozy standard room with a contemporary design created for "
+        "a comfortable stay. The room features a comfortable bed, "
+        "workspace, TV, air conditioning and free Wi-Fi.",
 
-        description_en=(
-            "A cozy standard room with a contemporary design created for "
-            "a comfortable stay. The room features a comfortable bed, "
-            "workspace, TV, air conditioning, free Wi-Fi and a private bathroom."
-        ),
+        250,
+        2,
+        5
+    )
 
-        price=250,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel2.id,
+        standard_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_nt406wnt406wnt40.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_ka8syka8syka8syk.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_w1fwqw1fwqw1fwqw.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 2 - DELUXE ROOMS
-    # 4 ROOMS
+    # HOTEL 2 - DELUXE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel2.id,
-        room_type_id=deluxe_type.id,
+    add_rooms(
+        hotel2.id,
+        deluxe_type.id,
+        "დელუქს ოთახი",
+        "Deluxe Room",
 
-        name_ka="დელუქს ოთახი",
-        name_en="Deluxe Room",
+        "ფართო დელუქს ოთახი შექმნილია სტუმრებისთვის, რომლებიც "
+        "მეტ სივრცესა და კომფორტს ანიჭებენ უპირატესობას. ნომერში "
+        "განთავსებულია დიდი საწოლი, დასასვენებელი სივრცე, სამუშაო "
+        "მაგიდა, ტელევიზორი და მინიბარი.",
 
-        description_ka=(
-            "ფართო დელუქს ოთახი შექმნილია სტუმრებისთვის, რომლებიც "
-            "მეტ სივრცესა და კომფორტს ანიჭებენ უპირატესობას. ნომერში "
-            "განთავსებულია დიდი საწოლი, დასასვენებელი სივრცე, სამუშაო "
-            "მაგიდა, ტელევიზორი და მინიბარი."
-        ),
+        "A spacious deluxe room designed for guests who prefer "
+        "additional space and comfort. The room features a large bed, "
+        "seating area, work desk, TV and minibar.",
 
-        description_en=(
-            "A spacious deluxe room designed for guests who prefer "
-            "additional space and comfort. The room features a large bed, "
-            "seating area, work desk, TV and minibar."
-        ),
+        390,
+        2,
+        4
+    )
 
-        price=390,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel2.id,
+        deluxe_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_4icwao4icwao4icw.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_3osbsc3osbsc3osb.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_ka8syka8syka8syk.jpg"
-        ],
-
-        quantity=4
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 2 - FAMILY ROOMS
-    # 2 ROOMS
+    # HOTEL 2 - FAMILY
     # =========================================================
 
-    add_room(
-        hotel_id=hotel2.id,
-        room_type_id=family_type.id,
+    add_rooms(
+        hotel2.id,
+        family_type.id,
+        "ოჯახური ოთახი",
+        "Family Room",
 
-        name_ka="ოჯახური ოთახი",
-        name_en="Family Room",
+        "ფართო ოჯახური ოთახი განკუთვნილია ოჯახებისა და მცირე "
+        "ჯგუფებისთვის. ნომერში შესაძლებელია ოთხამდე სტუმრის "
+        "კომფორტულად განთავსება.",
 
-        description_ka=(
-            "ფართო ოჯახური ოთახი განკუთვნილია ოჯახებისა და მცირე "
-            "ჯგუფებისთვის. ნომერში შესაძლებელია ოთხამდე სტუმრის "
-            "კომფორტულად განთავსება."
-        ),
+        "A spacious family room designed for families and small groups. "
+        "The room can comfortably accommodate up to four guests.",
 
-        description_en=(
-            "A spacious family room designed for families and small groups. "
-            "The room can comfortably accommodate up to four guests."
-        ),
+        450,
+        4,
+        2
+    )
 
-        price=450,
-        max_guests=4,
-
-        image_urls=[
+    add_room_type_images(
+        hotel2.id,
+        family_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_4icwao4icwao4icw.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_3osbsc3osbsc3osb.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 2 - SUITES
-    # 2 ROOMS
+    # HOTEL 2 - SUITE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel2.id,
-        room_type_id=suite_type.id,
+    add_rooms(
+        hotel2.id,
+        suite_type.id,
+        "ლუქსი",
+        "Suite",
 
-        name_ka="ლუქსი",
-        name_en="Suite",
+        "პრემიუმ კლასის ფართო ლუქსი სტუმრებს სთავაზობს "
+        "კომფორტულ საძინებელსა და ცალკე მისაღებ სივრცეს.",
 
-        description_ka=(
-            "პრემიუმ კლასის ფართო ლუქსი სტუმრებს სთავაზობს "
-            "კომფორტულ საძინებელსა და ცალკე მისაღებ სივრცეს. "
-            "ნომერი აღჭურვილია დიდი საწოლით, დივნით, სამუშაო სივრცით, "
-            "ტელევიზორით, მინიბარითა და თანამედროვე აბაზანით."
-        ),
+        "A premium spacious suite featuring a comfortable bedroom "
+        "and separate living area.",
 
-        description_en=(
-            "A premium spacious suite featuring a comfortable bedroom "
-            "and separate living area. The suite includes a large bed, "
-            "sofa, workspace, TV, minibar and modern bathroom."
-        ),
+        600,
+        3,
+        2
+    )
 
-        price=600,
-        max_guests=3,
-
-        image_urls=[
+    add_room_type_images(
+        hotel2.id,
+        suite_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_4icwao4icwao4icw.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/rooms-hotel/Gemini_Generated_Image_3osbsc3osbsc3osb.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
+    # =========================================================
     # =========================================================
     # HOTEL 3 - TBILISI MARRIOTT
+    # =========================================================
     # =========================================================
 
     hotel3 = Hotel(
@@ -665,196 +662,171 @@ try:
 
 
     # =========================================================
-    # HOTEL 3 - SINGLE ROOMS
-    # 5 ROOMS
+    # HOTEL 3 - SINGLE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel3.id,
-        room_type_id=single_type.id,
+    add_rooms(
+        hotel3.id,
+        single_type.id,
+        "ერთადგილიანი ოთახი",
+        "Single Room",
 
-        name_ka="ერთადგილიანი ოთახი",
-        name_en="Single Room",
+        "ელეგანტური ერთადგილიანი ოთახი განკუთვნილია ერთი "
+        "სტუმრისთვის. ნომერი აღჭურვილია კომფორტული საწოლით, "
+        "სამუშაო სივრცით, ტელევიზორით, კონდიციონერით, "
+        "უფასო Wi-Fi-ით და პირადი აბაზანით.",
 
-        description_ka=(
-            "ელეგანტური ერთადგილიანი ოთახი განკუთვნილია ერთი "
-            "სტუმრისთვის. ნომერი აღჭურვილია კომფორტული საწოლით, "
-            "სამუშაო სივრცით, ტელევიზორით, კონდიციონერით, "
-            "უფასო Wi-Fi-ით და პირადი აბაზანით."
-        ),
+        "An elegant single room designed for one guest. "
+        "The room features a comfortable bed, workspace, TV, "
+        "air conditioning, free Wi-Fi and a private bathroom.",
 
-        description_en=(
-            "An elegant single room designed for one guest. "
-            "The room features a comfortable bed, workspace, TV, "
-            "air conditioning, free Wi-Fi and a private bathroom."
-        ),
+        240,
+        1,
+        5
+    )
 
-        price=240,
-        max_guests=1,
-
-        image_urls=[
+    add_room_type_images(
+        hotel3.id,
+        single_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_c046kvc046kvc046.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_jj7hbyjj7hbyjj7h.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_novv9pnovv9pnovv.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 3 - STANDARD ROOMS
-    # 5 ROOMS
+    # HOTEL 3 - STANDARD
     # =========================================================
 
-    add_room(
-        hotel_id=hotel3.id,
-        room_type_id=standard_type.id,
+    add_rooms(
+        hotel3.id,
+        standard_type.id,
+        "სტანდარტული ოთახი",
+        "Standard Room",
 
-        name_ka="სტანდარტული ოთახი",
-        name_en="Standard Room",
+        "ელეგანტური სტანდარტული ოთახი შექმნილია კომფორტული "
+        "დასვენებისთვის. ნომერში არის კომფორტული საწოლი, "
+        "სამუშაო სივრცე, ტელევიზორი, კონდიციონერი, Wi-Fi "
+        "და თანამედროვე პირადი აბაზანა.",
 
-        description_ka=(
-            "ელეგანტური სტანდარტული ოთახი შექმნილია კომფორტული "
-            "დასვენებისთვის. ნომერში არის კომფორტული საწოლი, "
-            "სამუშაო სივრცე, ტელევიზორი, კონდიციონერი, Wi-Fi "
-            "და თანამედროვე პირადი აბაზანა."
-        ),
+        "An elegant standard room designed for a comfortable stay. "
+        "The room includes a comfortable bed, workspace, TV, "
+        "air conditioning, Wi-Fi and a modern private bathroom.",
 
-        description_en=(
-            "An elegant standard room designed for a comfortable stay. "
-            "The room includes a comfortable bed, workspace, TV, "
-            "air conditioning, Wi-Fi and a modern private bathroom."
-        ),
+        290,
+        2,
+        5
+    )
 
-        price=290,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel3.id,
+        standard_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_c046kvc046kvc046.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_jj7hbyjj7hbyjj7h.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_novv9pnovv9pnovv.jpg"
-        ],
-
-        quantity=5
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 3 - DELUXE ROOMS
-    # 4 ROOMS
+    # HOTEL 3 - DELUXE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel3.id,
-        room_type_id=deluxe_type.id,
+    add_rooms(
+        hotel3.id,
+        deluxe_type.id,
+        "დელუქს ოთახი",
+        "Deluxe Room",
 
-        name_ka="დელუქს ოთახი",
-        name_en="Deluxe Room",
+        "ელეგანტური და ფართო დელუქს ნომერი უზრუნველყოფს მაღალი "
+        "დონის კომფორტს როგორც დასასვენებლად, ასევე საქმიანი "
+        "მოგზაურობისთვის.",
 
-        description_ka=(
-            "ელეგანტური და ფართო დელუქს ნომერი უზრუნველყოფს მაღალი "
-            "დონის კომფორტს როგორც დასასვენებლად, ასევე საქმიანი "
-            "მოგზაურობისთვის. ოთახში არის დიდი საწოლი, სამუშაო სივრცე, "
-            "დასასვენებელი ზონა, ტელევიზორი, მინიბარი, კონდიციონერი, "
-            "უფასო Wi-Fi და პირადი თანამედროვე აბაზანა."
-        ),
+        "An elegant and spacious deluxe room providing a high level "
+        "of comfort for both leisure and business travelers.",
 
-        description_en=(
-            "An elegant and spacious deluxe room providing a high level "
-            "of comfort for both leisure and business travelers. It "
-            "includes a large bed, workspace, seating area, TV, minibar, "
-            "air conditioning, free Wi-Fi and a modern private bathroom."
-        ),
+        420,
+        2,
+        4
+    )
 
-        price=420,
-        max_guests=2,
-
-        image_urls=[
+    add_room_type_images(
+        hotel3.id,
+        deluxe_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_c046kvc046kvc046.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_jj7hbyjj7hbyjj7h.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_novv9pnovv9pnovv.jpg"
-        ],
-
-        quantity=4
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 3 - FAMILY ROOMS
-    # 2 ROOMS
+    # HOTEL 3 - FAMILY
     # =========================================================
 
-    add_room(
-        hotel_id=hotel3.id,
-        room_type_id=family_type.id,
+    add_rooms(
+        hotel3.id,
+        family_type.id,
+        "ოჯახური ოთახი",
+        "Family Room",
 
-        name_ka="ოჯახური ოთახი",
-        name_en="Family Room",
+        "ფართო ოჯახური ნომერი შექმნილია ოჯახებისთვის ან მცირე "
+        "ჯგუფებისთვის. ოთახში შესაძლებელია ოთხამდე სტუმრის "
+        "კომფორტულად განთავსება.",
 
-        description_ka=(
-            "ფართო ოჯახური ნომერი შექმნილია ოჯახებისთვის ან მცირე "
-            "ჯგუფებისთვის. ოთახში შესაძლებელია ოთხამდე სტუმრის "
-            "კომფორტულად განთავსება. ნომერი მოიცავს კომფორტულ საწოლებს, "
-            "დასასვენებელ სივრცეს, სამუშაო მაგიდას, ტელევიზორს, "
-            "კონდიციონერს, უფასო Wi-Fi-ს და დიდ თანამედროვე აბაზანას."
-        ),
+        "A spacious family room designed for families or small groups. "
+        "The room can comfortably accommodate up to four guests.",
 
-        description_en=(
-            "A spacious family room designed for families or small groups. "
-            "The room can comfortably accommodate up to four guests. "
-            "It includes comfortable beds, seating area, work desk, TV, "
-            "air conditioning, free Wi-Fi and a large modern bathroom."
-        ),
+        500,
+        4,
+        2
+    )
 
-        price=500,
-        max_guests=4,
-
-        image_urls=[
+    add_room_type_images(
+        hotel3.id,
+        family_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_57y3pc57y3pc57y3.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_ct1z9pct1z9pct1z.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_7i22yh7i22yh7i22.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
     # =========================================================
-    # HOTEL 3 - SUITES
-    # 2 ROOMS
+    # HOTEL 3 - SUITE
     # =========================================================
 
-    add_room(
-        hotel_id=hotel3.id,
-        room_type_id=suite_type.id,
+    add_rooms(
+        hotel3.id,
+        suite_type.id,
+        "ლუქსი",
+        "Suite",
 
-        name_ka="ლუქსი",
-        name_en="Suite",
+        "მდიდრული ლუქსი შექმნილია სტუმრებისთვის, რომლებიც "
+        "პრემიუმ კომფორტს ეძებენ. ნომერი მოიცავს ცალკე საძინებელსა "
+        "და მისაღებ სივრცეს.",
 
-        description_ka=(
-            "მდიდრული ლუქსი შექმნილია სტუმრებისთვის, რომლებიც "
-            "პრემიუმ კომფორტს ეძებენ. ნომერი მოიცავს ცალკე საძინებელსა "
-            "და მისაღებ სივრცეს, დიდ საწოლს, დივანს, სამუშაო მაგიდას, "
-            "ტელევიზორს, მინიბარს და თანამედროვე აბაზანას."
-        ),
+        "A luxurious suite designed for guests seeking premium comfort. "
+        "The suite includes a separate bedroom and living area.",
 
-        description_en=(
-            "A luxurious suite designed for guests seeking premium comfort. "
-            "The suite includes a separate bedroom and living area, large bed, "
-            "sofa, work desk, TV, minibar and modern bathroom."
-        ),
+        700,
+        3,
+        2
+    )
 
-        price=700,
-        max_guests=3,
-
-        image_urls=[
+    add_room_type_images(
+        hotel3.id,
+        suite_type.id,
+        [
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_c046kvc046kvc046.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_jj7hbyjj7hbyjj7h.jpg",
             "https://jqlclezeahbawibogfxf.supabase.co/storage/v1/object/public/hotel-images/hotel/Gemini_Generated_Image_novv9pnovv9pnovv.jpg"
-        ],
-
-        quantity=2
+        ]
     )
 
 
@@ -864,13 +836,15 @@ try:
 
     db.commit()
 
+    print()
     print("==============================================")
-    print("Hotels, rooms and images successfully added!")
+    print("SEED COMPLETED SUCCESSFULLY")
     print("==============================================")
-    print("Hotel 1: 18 rooms")
-    print("Hotel 2: 18 rooms")
-    print("Hotel 3: 18 rooms")
-    print("TOTAL: 54 rooms")
+    print("Hotels: 3")
+    print("Rooms: 54")
+    print("Room types: 5")
+    print("Room images: 0")
+    print("Room type images: added")
     print("==============================================")
 
 
@@ -878,12 +852,14 @@ except Exception as e:
 
     db.rollback()
 
+    print()
     print("==============================================")
-    print(f"Error: {e}")
+    print("ERROR")
+    print("==============================================")
+    print(e)
     print("==============================================")
 
 
 finally:
 
     db.close()
-
