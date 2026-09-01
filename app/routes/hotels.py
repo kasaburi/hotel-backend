@@ -19,17 +19,11 @@ router = APIRouter(
 
 @router.get("")
 def get_hotels(
-    city: str | None = Query(
-        default=None
-    ),
+    city: str | None = Query(default=None),
 
-    check_in: date | None = Query(
-        default=None
-    ),
+    check_in: date | None = Query(default=None),
 
-    check_out: date | None = Query(
-        default=None
-    ),
+    check_out: date | None = Query(default=None),
 
     guests: int | None = Query(
         default=None,
@@ -56,9 +50,7 @@ def get_hotels(
         le=5
     ),
 
-    sort: str | None = Query(
-        default=None
-    ),
+    sort: str | None = Query(default=None),
 
     db: Session = Depends(get_db)
 ):
@@ -88,7 +80,7 @@ def get_hotels(
             )
 
     # =====================================================
-    # BASE QUERY
+    # BASE HOTEL QUERY
     # =====================================================
 
     query = db.query(Hotel)
@@ -122,6 +114,10 @@ def get_hotels(
     # =====================================================
 
     for hotel in hotels:
+
+        # =================================================
+        # ROOMS QUERY
+        # =================================================
 
         rooms_query = (
             db.query(Room)
@@ -161,7 +157,7 @@ def get_hotels(
             rooms = [
                 room
                 for room in rooms
-                if room.price_per_night >= min_price
+                if float(room.price_per_night) >= min_price
             ]
 
         if max_price is not None:
@@ -169,7 +165,7 @@ def get_hotels(
             rooms = [
                 room
                 for room in rooms
-                if room.price_per_night <= max_price
+                if float(room.price_per_night) <= max_price
             ]
 
         # =================================================
@@ -195,11 +191,23 @@ def get_hotels(
             rooms = available_rooms
 
         # =================================================
-        # IF NO ROOM MATCHES
+        # IF NO ROOMS MATCH
         # =================================================
 
         if not rooms:
             continue
+
+        # =================================================
+        # HOTEL IMAGES
+        # =================================================
+
+        hotel_images = [
+            {
+                "id": image.id,
+                "source": image.source
+            }
+            for image in hotel.images
+        ]
 
         # =================================================
         # ROOMS RESPONSE
@@ -209,34 +217,82 @@ def get_hotels(
 
         for room in rooms:
 
+            # ---------------------------------------------
+            # ROOM TYPE
+            # ---------------------------------------------
+
+            room_type = room.room_type
+
             room_type_name = None
 
-            if room.room_type:
+            if room_type:
+
                 room_type_name = (
-                    room.room_type.name_en
-                    or room.room_type.name_ka
+                    room_type.name_en
+                    or room_type.name_ka
                 )
 
-            rooms_result.append({
-                "id": room.id,
-                "name": room.name_en or room.name_ka,
-                "description": (
-                    room.description_en
-                    or room.description_ka
-                ),
-                "pricePerNight": room.price_per_night,
-                "maxGuests": room.max_guests,
-                "reservationCount": room.reservation_count,
-                "roomTypeId": room.room_type_id,
-                "roomTypeName": room_type_name,
+            # ---------------------------------------------
+            # ROOM IMAGES
+            # ---------------------------------------------
 
-                "images": [
+            room_images = [
+                {
+                    "id": image.id,
+                    "source": image.source
+                }
+                for image in room.images
+            ]
+
+            # ---------------------------------------------
+            # ROOM TYPE IMAGES
+            # ---------------------------------------------
+
+            room_type_images = []
+
+            if room_type:
+
+                room_type_images = [
                     {
                         "id": image.id,
                         "source": image.source
                     }
-                    for image in room.images
+                    for image in room_type.images
                 ]
+
+            # ---------------------------------------------
+            # ROOM
+            # ---------------------------------------------
+
+            rooms_result.append({
+
+                "id": room.id,
+
+                "name": (
+                    room.name_en
+                    or room.name_ka
+                ),
+
+                "description": (
+                    room.description_en
+                    or room.description_ka
+                ),
+
+                "pricePerNight": float(
+                    room.price_per_night
+                ),
+
+                "maxGuests": room.max_guests,
+
+                "reservationCount": room.reservation_count,
+
+                "roomTypeId": room.room_type_id,
+
+                "roomTypeName": room_type_name,
+
+                "images": room_images,
+
+                "roomTypeImages": room_type_images
             })
 
         # =================================================
@@ -244,15 +300,26 @@ def get_hotels(
         # =================================================
 
         result.append({
+
             "id": hotel.id,
-            "name": hotel.name_en or hotel.name_ka,
+
+            "name": (
+                hotel.name_en
+                or hotel.name_ka
+            ),
+
             "description": (
                 hotel.description_en
                 or hotel.description_ka
             ),
+
             "city": hotel.city,
+
             "featuredImage": hotel.featured_image,
+
             "rating": hotel.rating,
+
+            "images": hotel_images,
 
             "rooms": rooms_result
         })
@@ -273,7 +340,7 @@ def get_hotels(
     elif sort == "price_desc":
 
         result.sort(
-            key=lambda hotel: min(
+            key=lambda hotel: max(
                 room["pricePerNight"]
                 for room in hotel["rooms"]
             ),
@@ -283,14 +350,14 @@ def get_hotels(
     elif sort == "rating_desc":
 
         result.sort(
-            key=lambda hotel: hotel["rating"],
+            key=lambda hotel: hotel["rating"] or 0,
             reverse=True
         )
 
     elif sort == "rating_asc":
 
         result.sort(
-            key=lambda hotel: hotel["rating"]
+            key=lambda hotel: hotel["rating"] or 0
         )
 
     return result
@@ -306,6 +373,10 @@ def get_hotel(
     db: Session = Depends(get_db)
 ):
 
+    # =====================================================
+    # FIND HOTEL
+    # =====================================================
+
     hotel = (
         db.query(Hotel)
         .filter(
@@ -315,57 +386,135 @@ def get_hotel(
     )
 
     if not hotel:
+
         raise HTTPException(
             status_code=404,
             detail="Hotel not found"
         )
 
-    return {
-        "id": hotel.id,
-        "name": hotel.name_en or hotel.name_ka,
-        "description": (
-            hotel.description_en
-            or hotel.description_ka
-        ),
-        "city": hotel.city,
-        "featuredImage": hotel.featured_image,
-        "rating": hotel.rating,
+    # =====================================================
+    # HOTEL IMAGES
+    # =====================================================
 
-        "images": [
+    hotel_images = [
+        {
+            "id": image.id,
+            "source": image.source
+        }
+        for image in hotel.images
+    ]
+
+    # =====================================================
+    # ROOMS
+    # =====================================================
+
+    rooms_result = []
+
+    for room in hotel.rooms:
+
+        # -------------------------------------------------
+        # ROOM TYPE
+        # -------------------------------------------------
+
+        room_type = room.room_type
+
+        room_type_name = None
+
+        if room_type:
+
+            room_type_name = (
+                room_type.name_en
+                or room_type.name_ka
+            )
+
+        # -------------------------------------------------
+        # ROOM IMAGES
+        # -------------------------------------------------
+
+        room_images = [
             {
                 "id": image.id,
                 "source": image.source
             }
-            for image in hotel.images
-        ],
-
-        "rooms": [
-            {
-                "id": room.id,
-                "name": room.name_en or room.name_ka,
-                "description": (
-                    room.description_en
-                    or room.description_ka
-                ),
-                "pricePerNight": room.price_per_night,
-                "maxGuests": room.max_guests,
-                "roomTypeId": room.room_type_id,
-
-                "roomTypeName": (
-                    room.room_type.name_en
-                    or room.room_type.name_ka
-                    if room.room_type
-                    else None
-                ),
-
-                "images": [
-                    {
-                        "id": image.id,
-                        "source": image.source
-                    }
-                    for image in room.images
-                ]
-            }
-            for room in hotel.rooms
+            for image in room.images
         ]
+
+        # -------------------------------------------------
+        # ROOM TYPE IMAGES
+        # -------------------------------------------------
+
+        room_type_images = []
+
+        if room_type:
+
+            room_type_images = [
+                {
+                    "id": image.id,
+                    "source": image.source
+                }
+                for image in room_type.images
+            ]
+
+        # -------------------------------------------------
+        # ROOM RESPONSE
+        # -------------------------------------------------
+
+        rooms_result.append({
+
+            "id": room.id,
+
+            "name": (
+                room.name_en
+                or room.name_ka
+            ),
+
+            "description": (
+                room.description_en
+                or room.description_ka
+            ),
+
+            "pricePerNight": float(
+                room.price_per_night
+            ),
+
+            "maxGuests": room.max_guests,
+
+            "reservationCount": room.reservation_count,
+
+            "roomTypeId": room.room_type_id,
+
+            "roomTypeName": room_type_name,
+
+            "images": room_images,
+
+            "roomTypeImages": room_type_images
+        })
+
+    # =====================================================
+    # FINAL HOTEL RESPONSE
+    # =====================================================
+
+    return {
+
+        "id": hotel.id,
+
+        "name": (
+            hotel.name_en
+            or hotel.name_ka
+        ),
+
+        "description": (
+            hotel.description_en
+            or hotel.description_ka
+        ),
+
+        "city": hotel.city,
+
+        "featuredImage": hotel.featured_image,
+
+        "rating": hotel.rating,
+
+        "images": hotel_images,
+
+        "rooms": rooms_result
     }
