@@ -1,3 +1,4 @@
+
 import os
 
 from datetime import datetime, timedelta, timezone
@@ -50,7 +51,6 @@ if not SECRET_KEY:
         "SECRET_KEY is not configured"
     )
 
-
 ALGORITHM = "HS256"
 
 
@@ -102,7 +102,6 @@ def register(
     )
 
     if existing_user:
-
         raise HTTPException(
             status_code=409,
             detail="This email address is already in use."
@@ -138,11 +137,9 @@ def register(
 
         phone=user_data.phone,
 
-        zipcode=user_data.zipcode,
+        gender=user_data.gender,
 
-        avatar=user_data.avatar,
-
-        gender=user_data.gender
+        role="user"
     )
 
 
@@ -211,7 +208,6 @@ def login(
     # -----------------------------------------------------
 
     if not user:
-
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password."
@@ -232,10 +228,6 @@ def login(
         )
 
     except UnknownHashError:
-
-        # -------------------------------------------------
-        # PASSWORD IN DATABASE IS NOT A VALID BCRYPT HASH
-        # -------------------------------------------------
 
         raise HTTPException(
             status_code=401,

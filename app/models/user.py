@@ -50,20 +50,21 @@ class User(Base):
         nullable=True
     )
 
-    zipcode = Column(
-        String(20),
-        nullable=True
-    )
 
-    avatar = Column(
-        String(500),
-        nullable=True
-    )
 
     gender = Column(
         String(30),
         nullable=True
     )
+
+   
+
+    role = Column(
+        String(50),
+        nullable=True,
+        default="user"
+    )
+
 
     # =====================================================
     # RELATIONSHIPS
