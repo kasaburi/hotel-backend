@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-
+from app.models import Booking, Room, RoomImage
 from app.dependencies import get_current_user_id
 from app.database import get_db
-from app.models import Booking, Room
 from app.schemas import BookingCreate
 
 
@@ -162,7 +161,10 @@ def get_bookings(
         db.query(Booking)
         .options(
             joinedload(Booking.room)
-            .joinedload(Room.hotel)
+            .joinedload(Room.hotel),
+
+            joinedload(Booking.room)
+            .joinedload(Room.images)
         )
         .filter(
             Booking.user_id == user_id
@@ -233,6 +235,10 @@ def get_bookings(
 
             "status": booking.status,
 
+            # =========================================
+            # HOTEL
+            # =========================================
+
             "hotelId": (
                 hotel.id
                 if hotel
@@ -269,12 +275,23 @@ def get_bookings(
                 hotel.featured_image
                 if hotel
                 else None
-            )
+            ),
+
+            # =========================================
+            # ROOM IMAGES
+            # =========================================
+
+            "roomImages": [
+                image.source
+                for image in room.images
+            ] if room else []
         })
 
     return result
 
-
+# =========================================================
+# GET SINGLE BOOKING
+# =========================================================
 # =========================================================
 # GET SINGLE BOOKING
 # =========================================================
@@ -289,7 +306,10 @@ def get_booking(
         db.query(Booking)
         .options(
             joinedload(Booking.room)
-            .joinedload(Room.hotel)
+            .joinedload(Room.hotel),
+
+            joinedload(Booking.room)
+            .joinedload(Room.images)
         )
         .filter(
             Booking.id == booking_id,
@@ -363,6 +383,10 @@ def get_booking(
 
         "status": booking.status,
 
+        # =========================================
+        # HOTEL
+        # =========================================
+
         "hotelId": (
             hotel.id
             if hotel
@@ -399,9 +423,17 @@ def get_booking(
             hotel.featured_image
             if hotel
             else None
-        )
-    }
+        ),
 
+        # =========================================
+        # ROOM IMAGES
+        # =========================================
+
+        "roomImages": [
+            image.source
+            for image in room.images
+        ] if room else []
+    }
 
 # =========================================================
 # CANCEL / DELETE BOOKING

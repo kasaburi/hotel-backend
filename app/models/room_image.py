@@ -32,3 +32,5 @@ class RoomImage(Base):
         "Room",
         back_populates="images"
     )
+
+ 
