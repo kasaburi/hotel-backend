@@ -1,6 +1,5 @@
-
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.dependencies import get_current_user_id
 from app.database import get_db
@@ -24,7 +23,6 @@ def create_booking(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
-    # ვამოწმებთ არსებობს თუ არა ოთახი
     room = (
         db.query(Room)
         .filter(Room.id == booking_data.roomId)
@@ -37,14 +35,12 @@ def create_booking(
             detail="Room not found"
         )
 
-    # ვამოწმებთ თარიღებს
     if booking_data.checkOutDate <= booking_data.checkInDate:
         raise HTTPException(
             status_code=400,
             detail="Check-out date must be after check-in date"
         )
 
-    # ვქმნით ახალ ჯავშანს
     booking = Booking(
         user_id=user_id,
         room_id=booking_data.roomId,
@@ -83,6 +79,10 @@ def get_bookings(
 ):
     bookings = (
         db.query(Booking)
+        .options(
+            joinedload(Booking.room)
+            .joinedload(Room.hotel)
+        )
         .filter(Booking.user_id == user_id)
         .all()
     )
@@ -91,22 +91,98 @@ def get_bookings(
 
     for booking in bookings:
 
-        room = (
-            db.query(Room)
-            .filter(Room.id == booking.room_id)
-            .first()
-        )
+        room = booking.room
+        hotel = room.hotel if room else None
 
         result.append({
             "id": booking.id,
             "userId": booking.user_id,
+
             "roomID": booking.room_id,
+            "roomId": booking.room_id,
+
+            "roomName": (
+                room.name_en
+                if room and room.name_en
+                else room.name_ka
+                if room
+                else None
+            ),
+
+            "roomNameKa": (
+                room.name_ka
+                if room
+                else None
+            ),
+
+            "roomNameEn": (
+                room.name_en
+                if room
+                else None
+            ),
+
+            "roomPricePerNight": (
+                float(room.price_per_night)
+                if room
+                else None
+            ),
+
+            "maxGuests": (
+                room.max_guests
+                if room
+                else None
+            ),
+
             "customerName": booking.customer_name,
+
             "checkInDate": booking.check_in_date,
             "checkOutDate": booking.check_out_date,
-            "totalPrice": booking.total_price,
+
+            "totalPrice": float(
+                booking.total_price
+            ),
+
             "isConfirmed": booking.is_confirmed,
-            "hotelId": room.hotel_id if room else None
+
+            "status": booking.status,
+
+            "hotelId": (
+                hotel.id
+                if hotel
+                else None
+            ),
+
+            "hotelName": (
+                hotel.name_en
+                if hotel and hotel.name_en
+                else hotel.name_ka
+                if hotel
+                else None
+            ),
+
+            "hotelNameKa": (
+                hotel.name_ka
+                if hotel
+                else None
+            ),
+
+            "hotelNameEn": (
+                hotel.name_en
+                if hotel
+                else None
+            ),
+
+            "city": (
+                hotel.city
+                if hotel
+                else None
+            ),
+
+            "hotelImage": (
+                hotel.featured_image
+                if hotel
+                else None
+            )
         })
 
     return result
@@ -124,6 +200,10 @@ def get_booking(
 ):
     booking = (
         db.query(Booking)
+        .options(
+            joinedload(Booking.room)
+            .joinedload(Room.hotel)
+        )
         .filter(
             Booking.id == booking_id,
             Booking.user_id == user_id
@@ -137,22 +217,86 @@ def get_booking(
             detail="Booking not found"
         )
 
-    room = (
-        db.query(Room)
-        .filter(Room.id == booking.room_id)
-        .first()
-    )
+    room = booking.room
+    hotel = room.hotel if room else None
 
     return {
         "id": booking.id,
         "userId": booking.user_id,
+
         "roomID": booking.room_id,
+        "roomId": booking.room_id,
+
+        "roomName": (
+            room.name_en
+            if room and room.name_en
+            else room.name_ka
+            if room
+            else None
+        ),
+
+        "roomNameKa": (
+            room.name_ka
+            if room
+            else None
+        ),
+
+        "roomNameEn": (
+            room.name_en
+            if room
+            else None
+        ),
+
         "customerName": booking.customer_name,
+
         "checkInDate": booking.check_in_date,
         "checkOutDate": booking.check_out_date,
-        "totalPrice": booking.total_price,
+
+        "totalPrice": float(
+            booking.total_price
+        ),
+
         "isConfirmed": booking.is_confirmed,
-        "hotelId": room.hotel_id if room else None
+
+        "status": booking.status,
+
+        "hotelId": (
+            hotel.id
+            if hotel
+            else None
+        ),
+
+        "hotelName": (
+            hotel.name_en
+            if hotel and hotel.name_en
+            else hotel.name_ka
+            if hotel
+            else None
+        ),
+
+        "hotelNameKa": (
+            hotel.name_ka
+            if hotel
+            else None
+        ),
+
+        "hotelNameEn": (
+            hotel.name_en
+            if hotel
+            else None
+        ),
+
+        "city": (
+            hotel.city
+            if hotel
+            else None
+        ),
+
+        "hotelImage": (
+            hotel.featured_image
+            if hotel
+            else None
+        )
     }
 
 
@@ -187,4 +331,3 @@ def delete_booking(
     return {
         "message": "Booking deleted successfully"
     }
-
