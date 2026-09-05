@@ -1,5 +1,3 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
@@ -104,6 +102,10 @@ def create_booking(
         customer_name=booking_data.customerName,
         check_in_date=booking_data.checkInDate,
         check_out_date=booking_data.checkOutDate,
+
+        # IMPORTANT
+        guests=booking_data.guests,
+
         total_price=total_price,
         is_confirmed=False,
         status="pending"
@@ -127,7 +129,7 @@ def create_booking(
         "checkInDate": booking.check_in_date,
         "checkOutDate": booking.check_out_date,
 
-        "guests": booking_data.guests,
+        "guests": booking.guests,
 
         "nights": nights,
 
@@ -220,6 +222,8 @@ def get_bookings(
             "checkInDate": booking.check_in_date,
 
             "checkOutDate": booking.check_out_date,
+
+            "guests": booking.guests,
 
             "totalPrice": float(
                 booking.total_price
@@ -348,6 +352,8 @@ def get_booking(
         "checkInDate": booking.check_in_date,
 
         "checkOutDate": booking.check_out_date,
+
+        "guests": booking.guests,
 
         "totalPrice": float(
             booking.total_price
