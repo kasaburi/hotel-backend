@@ -56,6 +56,12 @@ class Booking(Base):
         nullable=False
     )
 
+    guests = Column(
+        Integer,
+        nullable=False,
+        default=1
+    )
+
     total_price = Column(
         Float,
         nullable=False

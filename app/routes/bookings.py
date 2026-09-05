@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
@@ -23,6 +25,10 @@ def create_booking(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
+    # -----------------------------------------------------
+    # FIND ROOM
+    # -----------------------------------------------------
+
     room = (
         db.query(Room)
         .filter(Room.id == booking_data.roomId)
@@ -35,11 +41,62 @@ def create_booking(
             detail="Room not found"
         )
 
+    # -----------------------------------------------------
+    # DATE VALIDATION
+    # -----------------------------------------------------
+
     if booking_data.checkOutDate <= booking_data.checkInDate:
         raise HTTPException(
             status_code=400,
             detail="Check-out date must be after check-in date"
         )
+
+    # -----------------------------------------------------
+    # GUEST VALIDATION
+    # -----------------------------------------------------
+
+    if booking_data.guests < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Guests must be at least 1"
+        )
+
+    if booking_data.guests > room.max_guests:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"This room allows maximum "
+                f"{room.max_guests} guests"
+            )
+        )
+
+    # -----------------------------------------------------
+    # CALCULATE NIGHTS
+    # -----------------------------------------------------
+
+    nights = (
+        booking_data.checkOutDate -
+        booking_data.checkInDate
+    ).days
+
+    if nights <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid booking dates"
+        )
+
+    # -----------------------------------------------------
+    # CALCULATE TOTAL PRICE
+    # -----------------------------------------------------
+
+    total_price = (
+        float(room.price_per_night) *
+        nights
+    )
+
+    # -----------------------------------------------------
+    # CREATE BOOKING
+    # -----------------------------------------------------
 
     booking = Booking(
         user_id=user_id,
@@ -47,23 +104,45 @@ def create_booking(
         customer_name=booking_data.customerName,
         check_in_date=booking_data.checkInDate,
         check_out_date=booking_data.checkOutDate,
-        total_price=booking_data.totalPrice,
-        is_confirmed=booking_data.isConfirmed
+        total_price=total_price,
+        is_confirmed=False,
+        status="pending"
     )
 
     db.add(booking)
     db.commit()
     db.refresh(booking)
 
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
     return {
         "id": booking.id,
         "userId": booking.user_id,
         "roomId": booking.room_id,
+
         "customerName": booking.customer_name,
+
         "checkInDate": booking.check_in_date,
         "checkOutDate": booking.check_out_date,
-        "totalPrice": booking.total_price,
+
+        "guests": booking_data.guests,
+
+        "nights": nights,
+
+        "pricePerNight": float(
+            room.price_per_night
+        ),
+
+        "totalPrice": float(
+            booking.total_price
+        ),
+
         "isConfirmed": booking.is_confirmed,
+
+        "status": booking.status,
+
         "message": "Booking created successfully"
     }
 
@@ -83,7 +162,9 @@ def get_bookings(
             joinedload(Booking.room)
             .joinedload(Room.hotel)
         )
-        .filter(Booking.user_id == user_id)
+        .filter(
+            Booking.user_id == user_id
+        )
         .all()
     )
 
@@ -96,6 +177,7 @@ def get_bookings(
 
         result.append({
             "id": booking.id,
+
             "userId": booking.user_id,
 
             "roomID": booking.room_id,
@@ -136,6 +218,7 @@ def get_bookings(
             "customerName": booking.customer_name,
 
             "checkInDate": booking.check_in_date,
+
             "checkOutDate": booking.check_out_date,
 
             "totalPrice": float(
@@ -222,6 +305,7 @@ def get_booking(
 
     return {
         "id": booking.id,
+
         "userId": booking.user_id,
 
         "roomID": booking.room_id,
@@ -247,9 +331,22 @@ def get_booking(
             else None
         ),
 
+        "roomPricePerNight": (
+            float(room.price_per_night)
+            if room
+            else None
+        ),
+
+        "maxGuests": (
+            room.max_guests
+            if room
+            else None
+        ),
+
         "customerName": booking.customer_name,
 
         "checkInDate": booking.check_in_date,
+
         "checkOutDate": booking.check_out_date,
 
         "totalPrice": float(

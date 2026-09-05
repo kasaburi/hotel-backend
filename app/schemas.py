@@ -191,23 +191,31 @@ class BookingCreate(BaseModel):
     """
 
     roomId: int
+
     customerName: str
 
     checkInDate: date
+
     checkOutDate: date
 
-    guests: int
+    guests: int = Field(
+        default=1,
+        ge=1,
+        description="Number of guests"
+    )
 
 
 class BookingResponse(BaseModel):
     id: int
 
     userId: int
+
     roomId: int
 
     customerName: str
 
     checkInDate: date
+
     checkOutDate: date
 
     guests: int
@@ -218,7 +226,24 @@ class BookingResponse(BaseModel):
 
     status: str
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # =========================================================
