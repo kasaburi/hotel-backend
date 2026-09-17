@@ -440,13 +440,15 @@ def get_booking(
 # =========================================================
 # CANCEL / DELETE BOOKING
 # =========================================================
-
 @router.delete("/{booking_id}")
 def delete_booking(
     booking_id: int,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
+    print("DELETE booking_id:", booking_id)
+    print("CURRENT user_id:", user_id)
+
     booking = (
         db.query(Booking)
         .filter(
@@ -455,6 +457,8 @@ def delete_booking(
         )
         .first()
     )
+
+    print("BOOKING FOUND:", booking)
 
     if not booking:
         raise HTTPException(
