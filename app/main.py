@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # =========================================================
 # MODELS
@@ -43,8 +44,21 @@ app = FastAPI(
 
 
 # =========================================================
+# GZIP COMPRESSION
+# =========================================================
+# ამცირებს დიდი JSON პასუხების ზომას.
+# 500 ბაიტზე დიდი პასუხები ავტომატურად შეიკუმშება.
+
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=500
+)
+
+
+# =========================================================
 # CORS
 # =========================================================
+# Local development + Vercel production frontend
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,11 +66,19 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:5501",
         "http://localhost:5501",
+        "https://hotel-eta-six.vercel.app",
     ],
 
     allow_credentials=True,
 
-    allow_methods=["*"],
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
 
     allow_headers=["*"],
 )
@@ -82,6 +104,7 @@ app.include_router(favorites_router)
 @app.get("/")
 def root():
     return {
+        "status": "online",
         "message": "Hotel Booking API is running"
     }
 
@@ -89,9 +112,12 @@ def root():
 # =========================================================
 # HEALTH CHECK
 # =========================================================
+# გამოიყენება server-ის მდგომარეობის შესამოწმებლად.
+# მაგალითად:
+# https://hotel-backend-qeue.onrender.com/health
 
 @app.get("/health")
 def health():
     return {
-        "status": "ok"
+        "status": "healthy"
     }
