@@ -367,6 +367,54 @@ def get_hotels(
 # GET ONE HOTEL
 # =========================================================
 
+
+
+
+
+
+
+
+
+# =========================================================
+# GET CITIES
+# =========================================================
+
+@router.get("/GetCities")
+def get_cities(
+    db: Session = Depends(get_db)
+):
+
+    cities = (
+        db.query(Hotel.city)
+        .filter(Hotel.city.isnot(None))
+        .distinct()
+        .all()
+    )
+
+    return [
+        city[0]
+        for city in cities
+        if city[0]
+    ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @router.get("/{hotel_id}")
 def get_hotel(
     hotel_id: int,
